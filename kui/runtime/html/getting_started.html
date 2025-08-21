@@ -1,0 +1,27 @@
+<html>
+    <head>
+        <link rel="stylesheet" kui_href="css/getting_started.css">
+    </head>
+    <body>
+        <div class="container">
+            <div class="hero">
+                <div class="logo">Lib&nbsp;KUI</div>
+                <h1>Getting Started</h1>
+                <p>Lorem Ipsum Dolor Sit Amet</p>
+            </div>
+        
+            <div class="actions">
+                <button onclick="getVersion()">Kui Version</button><br>
+            </div>
+
+            <p id="versionBox"></p>
+        </div>
+
+        <script>
+            async function getVersion() {
+                const v = await kui.version();
+                document.getElementById("versionBox").textContent = v;
+            }
+        </script>
+    </body>
+</html>
