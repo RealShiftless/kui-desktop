@@ -1,3 +1,5 @@
+console.log("Prelude type shi");
+
 (() => {
     console.log("Initializing prelude");
 

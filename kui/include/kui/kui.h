@@ -29,6 +29,7 @@ typedef struct {
     const char* title;  // optional
     int width;          // <=0 -> default
     int height;         // <=0 -> default
+    int debug;
 } KuiArgs;
 
 typedef enum {

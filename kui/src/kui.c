@@ -26,6 +26,32 @@ KuiState kui_get_state(void) { return gState; }
 
 
 /* ----- Helper ----- */
+static void set_html(webview_t view,
+                               const unsigned char *data, size_t len) {
+    if (!view || !data || !len) return;
+    char *buf = (char*)malloc(len + 1);
+    if (!buf) return;
+    memcpy(buf, data, len);
+    buf[len] = '\0';
+    webview_set_html(view, buf);
+    free(buf);
+}
+
+static void js_eval(webview_t *view, const unsigned char *data, size_t len) {
+    if (view == NULL || data == NULL || len == 0) return;
+
+    char *buf = (char*)malloc(len + 1);
+    if (!buf) return;
+
+    memcpy(buf, data, len);
+    buf[len] = '\0';
+
+    webview_eval(view, buf);
+
+    free(buf);
+}
+
+
 static void reply_ok(const char* seq, const char* json) {
     // status=0 => success in webview
     webview_return(gView, seq, 0, json);
@@ -144,12 +170,15 @@ static void __kui_resolve_cb(const char* seq, const char* req, void* user) {
 KuiResult kui_init(KuiArgs args) {
     if (gState != KUI_STATE_NONE) return KUI_ALREADY_INITIALIZED;
 
-    gView = webview_create(0, NULL);
-    if (!gView) return KUI_WEBVIEW_FAILED;
-
     const char* title = args.title ? args.title : DEFAULT_TITLE;
     int w = (args.width  > 0) ? args.width  : DEFAULT_WIDTH;
     int h = (args.height > 0) ? args.height : DEFAULT_HEIGHT;
+    int debug = (args.debug > 0 ? args.debug : 0);
+
+    gView = webview_create(debug, NULL);
+    if (!gView) return KUI_WEBVIEW_FAILED;
+
+    
     webview_set_title(gView, title);
     webview_set_size(gView, w, h, WEBVIEW_HINT_NONE);
 
@@ -241,7 +270,8 @@ static char* build_page_n(const char* body, size_t body_len,
 KuiResult kui_set_page(const KuiResource* page) {
     if (!page) return KUI_INVALID_RESOURCE;
 
-    webview_set_html(gView, page->data);
-    webview_eval(gView, gPrelude->data);   // ensure this copies; if not, keep html alive appropriately
+    set_html(gView, page->data, page->size);
+    js_eval(gView, gPrelude->data, gPrelude->size);   // ensure this copies; if not, keep html alive appropriately
     return KUI_OK;
 }
+

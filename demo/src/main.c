@@ -17,7 +17,8 @@ int main(void) {
     kui_init((KuiArgs){
         .title  = "Kui Demo",
         .width  = 900,
-        .height = 600 
+        .height = 600,
+        .debug = 1
     });
 
     kui_run();
