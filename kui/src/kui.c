@@ -26,7 +26,7 @@ KuiState kui_get_state(void) { return gState; }
 
 
 /* ----- Helper ----- */
-static void set_html(webview_t view,
+static void html_set(webview_t view,
                                const unsigned char *data, size_t len) {
     if (!view || !data || !len) return;
     char *buf = (char*)malloc(len + 1);
@@ -34,6 +34,16 @@ static void set_html(webview_t view,
     memcpy(buf, data, len);
     buf[len] = '\0';
     webview_set_html(view, buf);
+    free(buf);
+}
+
+static void js_init(webview_t *view, const unsigned char *data, size_t len) {
+    if (!view || !*view || !data || !len) return;
+    char *buf = (char*)malloc(len + 1);
+    if (!buf) return;
+    memcpy(buf, data, len);
+    buf[len] = '\0';
+    webview_init(*view, buf);
     free(buf);
 }
 
@@ -188,6 +198,9 @@ KuiResult kui_init(KuiArgs args) {
 
     // Get the prelude
     gPrelude = kui_resource_find("js/prelude.js");
+    if (gPrelude && gPrelude->data && gPrelude->size) {
+        js_init(&gView, gPrelude->data, gPrelude->size);  // <- key change
+    }
     
     // Load the default page
     const KuiResource* default_page = kui_resource_find("html/getting_started.html");
@@ -270,8 +283,8 @@ static char* build_page_n(const char* body, size_t body_len,
 KuiResult kui_set_page(const KuiResource* page) {
     if (!page) return KUI_INVALID_RESOURCE;
 
-    set_html(gView, page->data, page->size);
-    js_eval(gView, gPrelude->data, gPrelude->size);   // ensure this copies; if not, keep html alive appropriately
+    html_set(gView, page->data, page->size);
+    //js_eval(gView, gPrelude->data, gPrelude->size);   // ensure this copies; if not, keep html alive appropriately
     return KUI_OK;
 }
 
