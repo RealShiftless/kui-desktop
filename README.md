@@ -3,14 +3,14 @@
 **Kui** is a tiny cross-platform desktop framework that lets you build apps with HTML/CSS/JS — powered by [webview](https://github.com/webview/webview) and C.  
 It aims to provide a lightweight alternative to Electron with a minimal footprint and a simple C API.
 
+<p align="center">
+  <img src="docs/screenshots/multi-platform.png" width="80%"/>
+</p>
+
 > ⚠️ **Status:** Work in Progress  
 > Kui is still under heavy development. Expect breaking changes and missing features.  
 
 ---
-
-<p align="center">
-  <img src="docs/screenshots/multi-platform.png" width="80%"/>
-</p>
 
 ## ✨ Features (current)
 
