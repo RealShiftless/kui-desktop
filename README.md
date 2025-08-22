@@ -8,6 +8,8 @@ It aims to provide a lightweight alternative to Electron with a minimal footprin
 
 ---
 
+![Kui on Windows and Linux](docs\screenshots\multi-platform.png)
+
 ## ✨ Features (current)
 
 - 🚀 **Cross-platform:** Windows (WebView2), Linux (WebKitGTK), macOS (WebKit)  
