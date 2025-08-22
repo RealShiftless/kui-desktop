@@ -18,7 +18,7 @@ It aims to provide a lightweight alternative to Electron with a minimal footprin
 - 📦 **Resource embedding:** HTML, CSS, JS, images, etc. are compiled directly into the executable
 - 🔗 **Native bridge:** Call into C from JavaScript with a simple `kui.native(name, payload)` helper  
 - 🧩 **Prelude script:** Injected automatically on every page load, sets up the bridge and resource resolver  
-- 🖼️ **Demo app:** included under `/src` and `\runtime`, shows basic usage  
+- 🖼️ **Demo app:** included under `/src` and `/runtime`, shows basic usage  
 
 ---
 
