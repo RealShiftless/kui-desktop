@@ -25,6 +25,8 @@ static inline const KuiResource* kui_resource_find(const char* path) {
   return NULL;
 }
 
+//KUI_CALLBACK KuiResource* kui_find_user_resource(const char* path);
+
 static inline int kui__ci_equal(const char* a, const char* b) {
   for (; *a && *b; ++a, ++b) {
     char ca = (*a >= 'A' && *a <= 'Z') ? (*a + 32) : *a;

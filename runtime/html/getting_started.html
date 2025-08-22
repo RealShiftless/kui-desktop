@@ -17,11 +17,6 @@
             <p id="versionBox"></p>
         </div>
 
-        <script>
-            async function getVersion() {
-                const v = await kui.version();
-                document.getElementById("versionBox").textContent = v;
-            }
-        </script>
+        <script kui_src="js/getting_started.js"></script>
     </body>
 </html>

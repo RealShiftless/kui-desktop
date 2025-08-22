@@ -1,161 +1,104 @@
-#C stuff
+# ---- Settings ----
+set(APP_NAME "kui-desktop demo")
+
+# ---- Project ----
 cmake_minimum_required(VERSION 3.16)
 project(kui LANGUAGES C CXX)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# --- Embed files from kui/runtime into the library (configure-time) ---------
-find_program(XXD xxd)
-
-# Detect whether xxd supports -n (newer Vim xxd does; Jammy's doesn't)
-set(XXD_SUPPORTS_NAME OFF)
-if(XXD)
-  execute_process(COMMAND "${XXD}" -h
-                  OUTPUT_VARIABLE XXD_HELP OUTPUT_STRIP_TRAILING_WHITESPACE
-                  ERROR_QUIET)
-  if(XXD_HELP MATCHES "\n\\s*-n\\s")
-    set(XXD_SUPPORTS_NAME ON)
-  endif()
+# ---- Build output layout ----
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+if(CMAKE_CONFIGURATION_TYPES) # multi-config generators
+  foreach(cfg IN LISTS CMAKE_CONFIGURATION_TYPES)
+    string(TOUPPER "${cfg}" CFGU)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${CFGU} ${CMAKE_BINARY_DIR}/bin/${cfg})
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${CFGU} ${CMAKE_BINARY_DIR}/bin/${cfg})
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${CFGU} ${CMAKE_BINARY_DIR}/lib/${cfg})
+  endforeach()
 endif()
 
-file(GLOB_RECURSE KUI_RUNTIME_FILES
-  "${CMAKE_CURRENT_SOURCE_DIR}/kui/runtime/*.*")
+# ---- Generators (build-time) ----
+include(cmake/EmbedSingleFile.cmake)
+include(cmake/EmbedResources.cmake)
 
-set(GEN_DIR "${CMAKE_CURRENT_BINARY_DIR}/kui_embed")
-file(MAKE_DIRECTORY "${GEN_DIR}")
+# 1) Single file -> header for the internal prelude
+#    Generates: ${CMAKE_BINARY_DIR}/gen/internal/prelude.h
+#    Declares:  extern const unsigned char gPrelude[]; extern const size_t gPrelude_len;
+embed_file(
+  "kui/js/prelude.js"
+  "gen/internal/prelude.h"
+  gPrelude
+  PRELUDE_GEN_TARGET
+)
 
-function(make_sym_from_rel REL OUTVAR)
-  string(TOLOWER "${REL}" _rel)
-  string(REGEX REPLACE "[^A-Za-z0-9]" "_" _sym "${_rel}")
-  if(_sym MATCHES "^[0-9]")  # cannot start with digit
-    set(_sym "r_${_sym}")
-  endif()
-  set(${OUTVAR} "${_sym}" PARENT_SCOPE)
-endfunction()
+# 2) App runtime -> resources.c compiled into the library
+embed_resources("runtime" "runtime" KUI_RESOURCES_C KUI_GEN_DIR)
 
-set(_INCLUDES "")
-set(_TABLE "")
-
-foreach(F IN LISTS KUI_RUNTIME_FILES)
-  file(RELATIVE_PATH REL "${CMAKE_CURRENT_SOURCE_DIR}/kui/runtime" "${F}")
-  make_sym_from_rel("${REL}" SYM)
-
-  set(OUT_INC_NAME "${SYM}.inc")
-  set(OUT_INC      "${GEN_DIR}/${OUT_INC_NAME}")
-
-  if(XXD AND XXD_SUPPORTS_NAME)
-    execute_process(
-      COMMAND "${XXD}" -i -n "${SYM}" "${F}"
-      OUTPUT_FILE "${OUT_INC}"
-      RESULT_VARIABLE _rc
-    )
-    if(NOT _rc EQUAL 0)
-      message(FATAL_ERROR "xxd failed for ${F} (${_rc})")
-    endif()
-  else()
-    # Portable fallback (no external tools)
-    file(READ "${F}" HEXDATA HEX)
-    string(LENGTH "${HEXDATA}" N)
-    set(CONTENT "/* ${REL} */\nunsigned char ${SYM}[] = {")
-    set(i 0)
-    while(i LESS N)
-      string(SUBSTRING "${HEXDATA}" ${i} 2 B)
-      string(APPEND CONTENT "0x${B},")
-      math(EXPR i "${i}+2")
-    endwhile()
-    string(APPEND CONTENT "};\n")
-    file(WRITE "${OUT_INC}" "${CONTENT}")
-  endif()
-
-  list(APPEND _INCLUDES "#include \"${OUT_INC_NAME}\"\n")
-
-  get_filename_component(EXT "${F}" EXT)
-  string(TOLOWER "${EXT}" EXT)
-  if(EXT MATCHES "\\.(html|css|js)$")
-    set(KIND "KUI_RESOURCE_TEXT")
-  else()
-    set(KIND "KUI_RESOURCE_BINARY")
-  endif()
-
-  list(APPEND _TABLE
-    "  { \"${REL}\", (const unsigned char*)&${SYM}[0], sizeof(${SYM}), ${KIND} },\n")
-endforeach()
-
-set(KUI_RESOURCES_C "${GEN_DIR}/kui_resources.c")
-file(WRITE  "${KUI_RESOURCES_C}" "#include <stddef.h>\n#include \"kui/resource.h\"\n")
-foreach(L IN LISTS _INCLUDES)
-  file(APPEND "${KUI_RESOURCES_C}" "${L}")
-endforeach()
-file(APPEND "${KUI_RESOURCES_C}" "const KuiResource gKuiResources[] = {\n")
-foreach(R IN LISTS _TABLE)
-  file(APPEND "${KUI_RESOURCES_C}" "${R}")
-endforeach()
-file(APPEND "${KUI_RESOURCES_C}" "};\nconst size_t gKuiResourceCount = sizeof(gKuiResources)/sizeof(gKuiResources[0]);\n")
-
-
-# Fetch webview
+# ---- WebView dependency ----
 include(FetchContent)
-
 FetchContent_Declare(
-    webview
-    GIT_REPOSITORY https://github.com/webview/webview
-    GIT_TAG 0.12.0)
+  webview
+  GIT_REPOSITORY https://github.com/webview/webview
+  GIT_TAG 0.12.0
+)
 FetchContent_MakeAvailable(webview)
 
-
-# Put built stuff in neat folders: build/bin and build/lib
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)  # .exe, .dll
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)  # .so, .dylib (and .dll on Win if shared)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-
-foreach(cfg IN LISTS CMAKE_CONFIGURATION_TYPES)
-  string(TOUPPER "${cfg}" CFGU)
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${CFGU} ${CMAKE_BINARY_DIR}/bin/${cfg})
-  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${CFGU} ${CMAKE_BINARY_DIR}/bin/${cfg})
-  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${CFGU} ${CMAKE_BINARY_DIR}/lib/${cfg})
-endforeach()
-
-# cJSON
+# ---- cJSON (vendored) ----
 add_library(cjson STATIC kui/third_party/cjson/cJSON.c)
-target_include_directories(cjson PUBLIC third_party/cjson)
+target_include_directories(cjson PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/kui/third_party/cjson
+)
 
-# KUI
+# ---- KUI (static library) ----
 file(GLOB KUI_SRC CONFIGURE_DEPENDS
-    "${CMAKE_CURRENT_SOURCE_DIR}/kui/src/*.c")
+  "${CMAKE_CURRENT_SOURCE_DIR}/kui/src/*.c"
+)
 
-add_library(kui SHARED ${KUI_SRC})
-target_include_directories(kui PUBLIC kui/include/)
+add_library(kui STATIC
+  ${KUI_SRC}
+  "${KUI_RESOURCES_C}"          # compile embedded runtime into the lib
+)
 
-target_link_libraries(kui PRIVATE webview::core_static)
+# the lib must see generated headers/incs and wait for the generators
+add_dependencies(kui ${PRELUDE_GEN_TARGET} runtime_resources)
+target_include_directories(kui
+  PUBLIC  ${CMAKE_CURRENT_SOURCE_DIR}/include
+  PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/gen  # for prelude.h
+          ${KUI_GEN_DIR}                   # for resources includes
+          ${CMAKE_CURRENT_SOURCE_DIR}/kui/third_party
+)
+
+target_link_libraries(kui PRIVATE webview::core_static cjson)
 if(WIN32)
-  target_compile_definitions(kui PRIVATE WEBVIEW_EDGE=1)   # use WebView2
+  target_compile_definitions(kui PRIVATE WEBVIEW_EDGE=1)
   target_link_libraries(kui PRIVATE user32 ole32 shell32 advapi32)
 endif()
 
-target_sources(kui PRIVATE "${KUI_RESOURCES_C}")
-target_include_directories(kui PRIVATE "${GEN_DIR}")
-target_include_directories(kui PRIVATE kui/third_party)
+# If you ever ship a DLL build again, you can add your KUI_API toggles here.
+# For a pure static lib, no declspecs are needed.
 
-target_link_libraries(kui PRIVATE cjson)
-
-target_compile_definitions(kui PRIVATE KUI_BUILD=1)
-
-# Demo
+# ---- App (demo executable) ----
 file(GLOB DEMO_SRC CONFIGURE_DEPENDS
-    "${CMAKE_CURRENT_SOURCE_DIR}/demo/src/*.c")
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c"
+)
 
-# Windows (MSVC or MinGW)
 if(WIN32)
-  add_executable(kui_demo WIN32 ${DEMO_SRC})   # GUI subsystem (no console)
-  target_link_libraries(kui_demo PRIVATE user32 gdi32)
-# macOS
+  add_executable(app WIN32 ${DEMO_SRC})
+  target_link_libraries(app PRIVATE user32 gdi32)
 elseif(APPLE)
-  add_executable(kui_demo MACOSX_BUNDLE ${DEMO_SRC})
-# Linux (and other Unix, excluding macOS)
+  add_executable(app MACOSX_BUNDLE ${DEMO_SRC})
 elseif(UNIX)
-  add_executable(kui_demo ${DEMO_SRC})
-  target_link_libraries(kui_demo PRIVATE m pthread dl)
+  add_executable(app ${DEMO_SRC})
+  target_link_libraries(app PRIVATE m pthread dl)
 endif()
-target_link_libraries(kui_demo PRIVATE kui)
-target_include_directories(kui_demo PRIVATE kui/include/)
+
+set_target_properties(app PROPERTIES
+    OUTPUT_NAME ${APP_NAME}
+)
+
+target_link_libraries(app PRIVATE kui)
+target_include_directories(app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)

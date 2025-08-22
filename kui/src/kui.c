@@ -6,28 +6,30 @@
 
 #include "cjson/cJSON.h"
 
+#define gPrelude_DEFINE
+#include "internal/prelude.h"
+
 #define DEFAULT_TITLE  "KUI Window"
 #define DEFAULT_WIDTH  900
 #define DEFAULT_HEIGHT 600
 
-#define KUI_VERSION_PREFIX "dev"
+#define KUI_VERSION_PREFIX "alpha"
 #define KUI_VERSION_MAJOR 1
-#define KUI_VERSION_MINOR 1
-#define KUI_VERSION_PATCH 1
+#define KUI_VERSION_MINOR 0
+#define KUI_VERSION_PATCH 0
 
 #define PAGE_SHELL_SIZE 96
 
 static webview_t gView   = NULL;
 static KuiState  gState  = KUI_STATE_NONE;
 
-static const KuiResource* gPrelude;
+//static const KuiResource* gPrelude;
 
 KuiState kui_get_state(void) { return gState; }
 
 
 /* ----- Helper ----- */
-static void html_set(webview_t view,
-                               const unsigned char *data, size_t len) {
+static void html_set(webview_t view, const unsigned char *data, size_t len) {
     if (!view || !data || !len) return;
     char *buf = (char*)malloc(len + 1);
     if (!buf) return;
@@ -175,6 +177,50 @@ static void __kui_resolve_cb(const char* seq, const char* req, void* user) {
     free(b64);
 }
 
+static void __kui_eval_js_cb(const char* seq, const char* req, void* user) {
+    (void)user;
+
+    cJSON* root = cJSON_Parse(req);
+    if (!root) {
+        webview_return(gView, seq, 1, "{ \"error\": \"invalid JSON\" }");
+        return;
+    }
+
+    cJSON* arg0 = cJSON_GetArrayItem(root, 0);
+    if (!cJSON_IsObject(arg0)) {
+        cJSON_Delete(root);
+        webview_return(gView, seq, 1, "{\"error\":\"bad args\"}");
+        return;
+    }
+
+    const cJSON* path_node = cJSON_GetObjectItemCaseSensitive(arg0, "path");
+    const char* path = cJSON_GetStringValue(path_node);
+    const int pathLen = strlen(path);
+    if (!path) {
+        cJSON_Delete(root);
+        webview_return(gView, seq, 1, "{\"error\":\"missing url\"}");
+        return;
+    }
+
+
+    const KuiResource* resource = kui_resource_find(path);
+    cJSON_Delete(root);
+
+    if(!resource) {
+        static const char jsonSchema[] = "{ \"error\": \"could not locate resource %s\" }";
+        char jsonBuffer[sizeof jsonSchema + pathLen];
+        snprintf(jsonBuffer, sizeof jsonBuffer, jsonSchema, path);
+        jsonBuffer[sizeof jsonBuffer - 1] = '\0';
+
+        webview_return(gView, seq, 1, jsonBuffer);
+        return;
+    }
+
+    js_eval(gView, resource->data, resource->size);
+
+    webview_return(gView, seq, 0, "{ \"ok\": true }");
+}
+
 
 /* ----- API Func ----- */
 KuiResult kui_init(KuiArgs args) {
@@ -188,18 +234,17 @@ KuiResult kui_init(KuiArgs args) {
     gView = webview_create(debug, NULL);
     if (!gView) return KUI_WEBVIEW_FAILED;
 
-    
     webview_set_title(gView, title);
     webview_set_size(gView, w, h, WEBVIEW_HINT_NONE);
 
     // Bind native fns first (they persist across navigations)
     webview_bind(gView, "__kui_version", __kui_version_cb, NULL);
     webview_bind(gView, "__kui_resolve", __kui_resolve_cb, NULL);
+    webview_bind(gView, "__kui_eval_js", __kui_eval_js_cb, NULL);
 
     // Get the prelude
-    gPrelude = kui_resource_find("js/prelude.js");
-    if (gPrelude && gPrelude->data && gPrelude->size) {
-        js_init(&gView, gPrelude->data, gPrelude->size);  // <- key change
+    if (gPrelude && gPrelude_len) {
+        js_init(&gView, gPrelude, gPrelude_len);  // <- key change
     }
     
     // Load the default page

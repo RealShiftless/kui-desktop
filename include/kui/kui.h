@@ -4,7 +4,6 @@ extern "C" {
 #endif
 
 #include "kui/resource.h"
-#include "kui/api.h"
 
 typedef enum {
     KUI_OK = 0,
@@ -37,11 +36,11 @@ typedef enum {
     //KUI_SCOPE_USER  -- Commented out for now as i don't support user resources, yet
 } KuiScope;
 
-KUI_API KuiState  kui_get_state(void);
-KUI_API KuiResult kui_init(KuiArgs args);
-KUI_API KuiResult kui_run(void);
+KuiState  kui_get_state(void);
+KuiResult kui_init(KuiArgs args);
+KuiResult kui_run(void);
 
-KUI_API KuiResult kui_set_page(const KuiResource* resource);
+KuiResult kui_set_page(const KuiResource* resource);
 
 #ifdef __cplusplus
 }

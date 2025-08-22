@@ -38,12 +38,33 @@
     const finalize = () => {
         console.log("Finalizing page.");
 
-        // ---------- resource registry ----------
+        const blobCache = new Map();
+
+        async function processKuiScript(el) {
+            const path = el.getAttribute("kui_src");
+            if (!path) return;
+            el.remove(); // prevent broken <script src="null">
+
+            try {
+                const res = await kui.native("__kui_eval_js", { path: path });
+                //const code = atob(res.b64);
+                // run in page scope
+                //(0, eval)(code);
+            } catch (err) {
+                console.error("Failed to eval", path, err);
+            }
+        }
+
         async function resolveToBlobURL(url) {
             const res = await kui.native("__kui_resolve", { url });
+            if (!res || !res.b64) {
+                throw new Error("resolveToBlobURL: got empty data for " + url);
+            }
             const bytes = Uint8Array.from(atob(res.b64), c => c.charCodeAt(0));
-            const blob = new Blob([bytes], { type: res.mime });
-            return URL.createObjectURL(blob);
+            const blob = new Blob([bytes], { type: res.mime || "application/javascript" });
+            const blobUrl = URL.createObjectURL(blob);
+            blobCache.set(blobUrl, blob); // keep alive
+            return blobUrl;
         }
 
         function upgradeAttr(el, attr, realAttr) {
@@ -59,11 +80,15 @@
         }
 
         function processElement(el) {
-            if (el.hasAttribute("kui_src")) {
-                upgradeAttr(el, "kui_src", "src");
-            }
-            if (el.hasAttribute("kui_href")) {
-                upgradeAttr(el, "kui_href", "href");
+            if (el.tagName === "SCRIPT" && el.hasAttribute("kui_src")) {
+                processKuiScript(el);
+            } else {
+                if (el.hasAttribute("kui_src")) {
+                    upgradeAttr(el, "kui_src", "src");
+                }
+                if (el.hasAttribute("kui_href")) {
+                    upgradeAttr(el, "kui_href", "href");
+                }
             }
         }
 
