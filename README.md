@@ -9,7 +9,7 @@ It aims to provide a lightweight alternative to Electron with a minimal footprin
 ---
 
 <p align="center">
-  <img src="docs/screenshots/multi-platform.png" width="45%"/>
+  <img src="docs/screenshots/multi-platform.png" width="80%"/>
 </p>
 
 ## ✨ Features (current)
