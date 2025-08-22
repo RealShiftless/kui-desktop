@@ -1,10 +1,11 @@
-#include "kui/kui.h"
-#include "webview.h"
+#include "kui.h"
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 
 #include "cjson/cJSON.h"
+#include "filesystem.h"
 
 #define gPrelude_DEFINE
 #include "internal/prelude.h"
@@ -20,7 +21,7 @@
 
 #define PAGE_SHELL_SIZE 96
 
-static webview_t gView   = NULL;
+webview_t gView          = NULL;
 static KuiState  gState  = KUI_STATE_NONE;
 
 //static const KuiResource* gPrelude;
@@ -241,6 +242,8 @@ KuiResult kui_init(KuiArgs args) {
     webview_bind(gView, "__kui_version", __kui_version_cb, NULL);
     webview_bind(gView, "__kui_resolve", __kui_resolve_cb, NULL);
     webview_bind(gView, "__kui_eval_js", __kui_eval_js_cb, NULL);
+
+    fs_init();
 
     // Get the prelude
     if (gPrelude && gPrelude_len) {

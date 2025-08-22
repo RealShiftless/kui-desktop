@@ -3,8 +3,8 @@
 #include <string.h>
 
 typedef enum {
-  KUI_RESOURCE_TEXT,    // html/css/js (utf-8)
-  KUI_RESOURCE_BINARY   // images/fonts/etc
+    KUI_RESOURCE_TEXT,    // html/css/js (utf-8)
+    KUI_RESOURCE_BINARY   // images/fonts/etc
 } KuiResourceKind;
 
 typedef struct {
@@ -20,36 +20,36 @@ extern const size_t      gKuiResourceCount;
 
 // --- helpers (snake_case) ---
 static inline const KuiResource* kui_resource_find(const char* path) {
-  for (size_t i = 0; i < gKuiResourceCount; ++i)
-    if (strcmp(gKuiResources[i].path, path) == 0) return &gKuiResources[i];
-  return NULL;
+    for (size_t i = 0; i < gKuiResourceCount; ++i)
+        if (strcmp(gKuiResources[i].path, path) == 0) return &gKuiResources[i];
+    return NULL;
 }
 
 //KUI_CALLBACK KuiResource* kui_find_user_resource(const char* path);
 
 static inline int kui__ci_equal(const char* a, const char* b) {
-  for (; *a && *b; ++a, ++b) {
-    char ca = (*a >= 'A' && *a <= 'Z') ? (*a + 32) : *a;
-    char cb = (*b >= 'A' && *b <= 'Z') ? (*b + 32) : *b;
-    if (ca != cb) return 0;
-  }
-  return *a == 0 && *b == 0;
+    for (; *a && *b; ++a, ++b) {
+      char ca = (*a >= 'A' && *a <= 'Z') ? (*a + 32) : *a;
+      char cb = (*b >= 'A' && *b <= 'Z') ? (*b + 32) : *b;
+      if (ca != cb) return 0;
+    }
+    return *a == 0 && *b == 0;
 }
 
 static inline const char* kui_resource_mime(const char* path) {
-  const char* dot = strrchr(path, '.'); if (!dot) return "application/octet-stream";
-  ++dot;
-  if (kui__ci_equal(dot,"html")) return "text/html; charset=utf-8";
-  if (kui__ci_equal(dot,"js"))   return "text/javascript; charset=utf-8";
-  if (kui__ci_equal(dot,"css"))  return "text/css; charset=utf-8";
-  if (kui__ci_equal(dot,"png"))  return "image/png";
-  if (kui__ci_equal(dot,"jpg") || kui__ci_equal(dot,"jpeg")) return "image/jpeg";
-  if (kui__ci_equal(dot,"webp")) return "image/webp";
-  if (kui__ci_equal(dot,"svg"))  return "image/svg+xml";
-  if (kui__ci_equal(dot,"ttf"))  return "font/ttf";
-  if (kui__ci_equal(dot,"otf"))  return "font/otf";
-  if (kui__ci_equal(dot,"woff")) return "font/woff";
-  if (kui__ci_equal(dot,"woff2"))return "font/woff2";
-  if (kui__ci_equal(dot,"wasm")) return "application/wasm";
-  return "application/octet-stream";
+    const char* dot = strrchr(path, '.'); if (!dot) return "application/octet-stream";
+    ++dot;
+    if (kui__ci_equal(dot,"html")) return "text/html; charset=utf-8";
+    if (kui__ci_equal(dot,"js"))   return "text/javascript; charset=utf-8";
+    if (kui__ci_equal(dot,"css"))  return "text/css; charset=utf-8";
+    if (kui__ci_equal(dot,"png"))  return "image/png";
+    if (kui__ci_equal(dot,"jpg") || kui__ci_equal(dot,"jpeg")) return "image/jpeg";
+    if (kui__ci_equal(dot,"webp")) return "image/webp";
+    if (kui__ci_equal(dot,"svg"))  return "image/svg+xml";
+    if (kui__ci_equal(dot,"ttf"))  return "font/ttf";
+    if (kui__ci_equal(dot,"otf"))  return "font/otf";
+    if (kui__ci_equal(dot,"woff")) return "font/woff";
+    if (kui__ci_equal(dot,"woff2"))return "font/woff2";
+    if (kui__ci_equal(dot,"wasm")) return "application/wasm";
+    return "application/octet-stream";
 }
