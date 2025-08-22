@@ -8,7 +8,9 @@ It aims to provide a lightweight alternative to Electron with a minimal footprin
 
 ---
 
-![Kui on Windows and Linux](docs\screenshots\multi-platform.png)
+<p align="center">
+  <img src="docs/screenshots/multi-platform.png" width="45%"/>
+</p>
 
 ## ✨ Features (current)
 
